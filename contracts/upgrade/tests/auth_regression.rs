@@ -8,9 +8,8 @@
 
 extern crate std;
 
-use callora_upgrade::admin::{
-    UpgradeError, DEFAULT_COOLDOWN_SECONDS, MAX_COOLDOWN_SECONDS, MIN_COOLDOWN_SECONDS,
-};
+use callora_upgrade::admin::{DEFAULT_COOLDOWN_SECONDS, MAX_COOLDOWN_SECONDS, MIN_COOLDOWN_SECONDS};
+use callora_upgrade::errors::UpgradeError;
 use callora_upgrade::events;
 use soroban_sdk::testutils::{Address as _, Events as _};
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, TryFromVal};
@@ -133,7 +132,7 @@ fn non_admin_cannot_set_cooldown() {
 
     for value in [0u64, 1, MIN_COOLDOWN_SECONDS, 7_200, MAX_COOLDOWN_SECONDS] {
         let res = client.try_set_cooldown(&attacker, &value);
-        assert_eq!(res, Err(Ok(UpgradeError::NotAdmin)), "value {value}");
+        assert_eq!(res, Err(Ok(UpgradeError::Unauthorized)), "value {value}");
     }
     assert_eq!(client.get_cooldown(), DEFAULT_COOLDOWN_SECONDS);
 }
@@ -147,7 +146,7 @@ fn non_admin_attempt_does_not_change_existing_cooldown() {
 
     client.set_cooldown(&admin, &7_200);
     let res = client.try_set_cooldown(&attacker, &0);
-    assert_eq!(res, Err(Ok(UpgradeError::NotAdmin)));
+    assert_eq!(res, Err(Ok(UpgradeError::Unauthorized)));
     assert_eq!(client.get_cooldown(), 7_200);
 }
 

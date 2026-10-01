@@ -14,27 +14,10 @@
 //! | `check_and_record_upgrade`| `upgrade_recorded` | `(topic, caller)`               | `recorded_timestamp`              |
 //! | `set_cooldown`            | `cooldown_set`     | `(topic, caller)`               | `(old_cooldown_secs, new_cooldown_secs)` |
 
-use soroban_sdk::{contracterror, Address, Env, Symbol};
+use soroban_sdk::{Address, Env, Symbol};
 
+use crate::errors::UpgradeError;
 use crate::events;
-
-#[contracterror]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u32)]
-pub enum UpgradeError {
-    /// The cooldown period for upgrades has not yet elapsed.
-    CooldownNotElapsed = 1,
-    /// Arithmetic overflow.
-    Overflow = 2,
-    /// The caller is not the stored admin.
-    NotAdmin = 3,
-    /// The requested cooldown is outside `MIN_COOLDOWN_SECONDS..=MAX_COOLDOWN_SECONDS`.
-    InvalidCooldown = 4,
-    /// `init_admin` was already called.
-    AlreadyInitialized = 5,
-    /// No admin has been stored yet.
-    NotInitialized = 6,
-}
 
 const LAST_UPGRADE_TIME_KEY: &str = "last_upg_tm";
 const UPGRADE_COOLDOWN_KEY: &str = "upg_cooldown";
@@ -86,7 +69,7 @@ pub fn get_admin(env: &Env) -> Option<Address> {
 ///
 /// # Errors
 /// - `NotInitialized` if no admin is stored.
-/// - `NotAdmin` if `caller` is not the stored admin.
+/// - `Unauthorized` if `caller` is not the stored admin.
 /// - `InvalidCooldown` if `cooldown` is outside `MIN_COOLDOWN_SECONDS..=MAX_COOLDOWN_SECONDS`.
 ///
 /// # Events
@@ -97,7 +80,7 @@ pub fn set_cooldown(env: &Env, caller: &Address, cooldown: u64) -> Result<(), Up
 
     let admin = get_admin(env).ok_or(UpgradeError::NotInitialized)?;
     if *caller != admin {
-        return Err(UpgradeError::NotAdmin);
+        return Err(UpgradeError::Unauthorized);
     }
 
     if !(MIN_COOLDOWN_SECONDS..=MAX_COOLDOWN_SECONDS).contains(&cooldown) {
